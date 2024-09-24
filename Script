@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Arrays for cd1 and cd3 conditions (adjust as necessary)
+cd1=("prometheus.endpoint.enabled" "cd1_cond2" "cd1_cond3" "cd1_cond4" "cd1_cond5")
+cd3=("management.endpoints.enabled" "cd3_cond2" "cd3_cond3" "cd3_cond4" "cd3_cond5")
+
+# Open HTML file for writing
+echo "<table>" > file.html
+echo "<tr><th>Applications</th><th>Prometheus</th><th>Env</th><th>Thread-Dump</th><th>Heap-Dump</th><th>Loggers</th></tr>" >> file.html
+
+# Process the application list
+while IFS= read -r i; do
+    # Construct the application URL
+    ll="https://${i}${fd1}"
+    rsp1=$(curl -s -k "$ll")
+
+    echo "<tr><td>${i}</td>" >> file.html
+
+    # Initialize flags for each column (set true initially, change to false if any condition fails)
+    col1_pass=true
+    col2_pass=true
+    col3_pass=true
+    col4_pass=true
+    col5_pass=true
+
+    # Check cd1 conditions (first 5 checks)
+    for (( j=0; j<5; j++ )); do
+        cd1_condition=$(echo "$rsp1" | grep -o "${cd1[$j]}:[^,]*" | awk -F':' '{print $2}' | tr -d ' ')
+        if [[ "$cd1_condition" != "true" ]]; then
+            if [[ $j -eq 0 ]]; then col1_pass=false; fi
+            if [[ $j -eq 1 ]]; then col2_pass=false; fi
+            if [[ $j -eq 2 ]]; then col3_pass=false; fi
+            if [[ $j -eq 3 ]]; then col4_pass=false; fi
+            if [[ $j -eq 4 ]]; then col5_pass=false; fi
+        fi
+    done
+
+    # Check cd3 conditions (combined with the cd1 results)
+    for (( k=0; k<5; k++ )); do
+        cd3_condition=$(echo "$rsp1" | grep -o "${cd3[$k]}:[^,]*" | awk -F':' '{print $2}' | tr -d ' ')
+        if [[ "$cd3_condition" != "true" ]]; then
+            if [[ $k -eq 0 ]]; then col1_pass=false; fi
+            if [[ $k -eq 1 ]]; then col2_pass=false; fi
+            if [[ $k -eq 2 ]]; then col3_pass=false; fi
+            if [[ $k -eq 3 ]]; then col4_pass=false; fi
+            if [[ $k -eq 4 ]]; then col5_pass=false; fi
+        fi
+    done
+
+    # Output the results for each column
+    if [[ "$col1_pass" == true ]]; then
+        echo -ne "<td bgcolor='#76ff7a'>Yes</td>" >> file.html
+    else
+        echo -ne "<td bgcolor='Tomato'>No</td>" >> file.html
+    fi
+
+    if [[ "$col2_pass" == true ]]; then
+        echo -ne "<td bgcolor='#76ff7a'>Yes</td>" >> file.html
+    else
+        echo -ne "<td bgcolor='Tomato'>No</td>" >> file.html
+    fi
+
+    if [[ "$col3_pass" == true ]]; then
+        echo -ne "<td bgcolor='#76ff7a'>Yes</td>" >> file.html
+    else
+        echo -ne "<td bgcolor='Tomato'>No</td>" >> file.html
+    fi
+
+    if [[ "$col4_pass" == true ]]; then
+        echo -ne "<td bgcolor='#76ff7a'>Yes</td>" >> file.html
+    else
+        echo -ne "<td bgcolor='Tomato'>No</td>" >> file.html
+    fi
+
+    if [[ "$col5_pass" == true ]]; then
+        echo -ne "<td bgcolor='#76ff7a'>Yes</td>" >> file.html
+    else
+        echo -ne "<td bgcolor='Tomato'>No</td>" >> file.html
+    fi
+
+    echo "</tr>" >> file.html
+
+done < "application_list.txt"
+
+# Close the HTML table
+echo "</table>" >> file.html
+
+
+
